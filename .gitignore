@@ -1,2 +1,21 @@
 .aux .bit .blg .bbl .lof .log .lot .glo .glx .gxg .gxs .idx .ilg .ind .out .url .svn .toc
 
+**/*.aux
+**/*.lof
+**/*.log
+**/*.lot
+**/*.fls
+**/*.out
+**/*.toc
+**/*.fmt
+**/*.fot
+**/*.cb
+**/*.cb2
+**/*.lb
+**/*.bbl
+**/*.blg
+**/*.fdb_latexmk
+**/*.lol
+**/*.run.xml
+
+

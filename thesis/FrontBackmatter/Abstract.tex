@@ -1,0 +1,49 @@
+%*******************************************************
+% Abstract
+%*******************************************************
+%\renewcommand{\abstractname}{Abstract}
+\pdfbookmark[1]{Abstract}{Abstract}
+% \addcontentsline{toc}{chapter}{\tocEntry{Abstract}}
+\begingroup
+% \let\clearpage\relax
+% \let\cleardoublepage\relax
+% \let\cleardoublepage\relax
+
+\chapter*{Abstract}
+
+Vision-based landing systems have gained increased attention as cost-effective and autonomous alternatives 
+to traditional radio-based autoland systems, particularly in scenarios where on-ground infrastructure is 
+unavailable or infeasible. A major bottleneck in advancing this technology is the lack of large-scale, diverse, 
+and realistic runway image datasets with pixel-level annotations. While recent works have turned to synthetic 
+data generated from flight simulators, these approaches are limited by their lack of scalability, poor 
+environmental variability, and the high cost of manual annotation.
+
+This paper introduces a novel, open-source, modular data augmentation pipeline, called \emph{Canny2Concrete}, 
+that leverages latent diffusion models with ControlNet to generate high-resolution, labeled runway images. 
+By conditioning image generation on structural features extracted from existing datasets, the pipeline produces 
+realistic synthetic images that preserve critical runway geometry while offering substantial diversity in terms 
+of weather, lighting, and background scenery. A three-stage variant generation process enhances image variety 
+through positional transformations, outpainting, and environmental occlusion effects.
+
+Using this pipeline, a large-scale synthetic runway dataset---\emph{GARD: Gustavo's Awesome Runway Dataset}---has 
+been constructed and evaluated both intrinsically, using the Structural Similarity Index (SSIM), and extrinsically, 
+by training and fine-tuning state-of-the-art detection and segmentation models. Results demonstrate that models 
+trained on the proposed dataset match or outperform those trained on existing synthetic datasets, confirming 
+the viability of diffusion-based augmentation for runway segmentation tasks, and the effectiveness of the
+\emph{Canny2Concrete} pipeline in generating realistic runway images. The complete dataset, pipeline, and 
+evaluation tools are publicly available to support further research in autonomous aviation and computer vision.
+
+\emph{GARD}, along with trained segmentation model weights and evaluation results, is available at:
+\begin{center}
+\url{https://www.kaggle.com/datasets/depaulagu/gard2025}
+\end{center}
+
+The code for the project, including the implementation of the \emph{Canny2Concrete} pipeline, is available at:
+\begin{center}
+\url{https://github.com/gustavo-depaula/GARD}
+\end{center}
+
+% \vfill
+
+\endgroup
+
