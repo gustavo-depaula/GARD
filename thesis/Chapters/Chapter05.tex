@@ -1,8 +1,59 @@
 \chapter{Evaluation}
 
+\section{Generated Datasets}
+
+After filtering the template images manually using the Filtering Tool and
+the methodology described in Chapter 4, a total of 361 template images were
+selected.
+
+Using the Canny2Concrete pipeline with these filtered template images,
+\emph{GARD} was generated, containing a total of 45486 images, separated
+into three datasets:
+
+\begin{enumerate}
+\item \texttt{BaseImages}: containing 6498 images (18 variations for each of the 361 canny edge images).
+\item \texttt{VariantImages}: containing 19494 images (3 variations for each base image) \emph{before} weather occlusion.
+\item \texttt{VariantImagesWithOcclusion}: also 19494 images, same as \texttt{VariantImages} but with weather effects applied.
+\end{enumerate}
+
+\section{Sample Images}
+
+To demonstrate a sample of generated images, three random template images were
+chosen. Two are close-up shots and the third is a far away picture. They
+are shown as three grids of images of for rows.
+
+The first row contains the template image, the canny edge extracted from it,
+and the runway label mask. The second row contains three images from the Base
+Images dataset generated from the template image. The third row contains three
+images from the Variant Images dataset, generated from the Base Images. The
+fourth row contains three images from the Variant Images with Occlusion dataset,
+associated with the shown Variant Images.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.2\textwidth]{figures/GeneratedImage1.png}
+  \caption{Images generated from the template image \emph{"9xG0a8TUdXg\_028"} }
+\label{fig:noise_to_image}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.2\textwidth]{figures/GeneratedImage2.png}
+  \caption{Images generated from the template image \emph{"0CLSYZPFbTg\_110"} }
+\label{fig:noise_to_image}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.2\textwidth]{figures/GeneratedImage3.png}
+  \caption{Images generated from the template image \emph{"0P-HJgLkZLk\_085"} }
+\label{fig:noise_to_image}
+\end{figure}
+
+\FloatBarrier
 \section{Intrinsic Evaluation}
 
-The chosen metric for intrinsic evaluation was SSIM (Structural Similarity Index Measure) \cite{TODO}. 
+The chosen metric for intrinsic evaluation was SSIM (Structural Similarity Index Measure) \cite{wang_image_2004}. 
 SSIM evaluates how similar two images are to each other. 
 An SSIM of 1 indicates perfect similarity (i.e., the image compared with itself), a score of 0 indicates no similarity, and a score of -1 represents perfect anti-correlation.
 
@@ -21,6 +72,7 @@ On the other hand, since the generated image is based on the canny edge structur
 These are positive results, clearly indicating that the data augmentation process is functioning as expected. 
 The generated images are positively correlated with the template images---as expected in a data augmentation pipeline---while the similarity significantly drops as diversity is introduced.
 
+\FloatBarrier
 \section{Experimental Evaluation}
 
 Following the methodology of \cite{voetman_big_2023}, for extrinsic evaluation, several pre-trained segmentation models are fine-tuned, comparing their performance when trained exclusively on the synthetic images of LARD \cite{ducoffe_lard_2023} and when trained on the project's datasets.
@@ -40,8 +92,9 @@ LARD dataset and the GARD datasets, with the differences in performance
 highlighted, with a positive value indicating an improvement in performance of
 the model trained on the GARD dataset over the comparable one with the LARD dataset.
 
-The results are overwhelmingly positive, with the GARD dataset consistently
-matching or outperforming the LARD dataset in most cases. Especially in the
+Based on the experimental evaluation metrics, the results are overwhelmingly
+positive, as the GARD dataset has consistently 
+matched or outperformed the LARD dataset in most cases. Especially in the
 Edge Cases dataset, which is the most challenging, the GARD dataset shows
 outpeformance across all models, tasks (detection and segmentation), and mAP
 thresholds.
@@ -53,6 +106,10 @@ thresholds.
 \small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.2}
+
+  \caption{Validation with real images from LARD dataset, \emph{Nominal} dataset: YOLO11n/s/m performance comparison between LARD and GARD variants, with per-variant differences ($\Delta$).}
+  \label{tab:nominal_results}
+
 \begin{tabular}{|c|c|ccc|ccc|}
 \hline
 \multirow{2}{*}{\textbf{Model}} &
@@ -96,8 +153,6 @@ thresholds.
 \hline
 
 \end{tabular}
-  \caption{Validation with real images from LARD dataset, \emph{Nominal} dataset: YOLO11n/s/m performance comparison between LARD and GARD variants, with per-variant differences ($\Delta$).}
-  \label{tab:nominal_results}
 \end{table}
 
 
@@ -106,6 +161,9 @@ thresholds.
 \small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.2}
+  \caption{Validation with real images from LARD dataset, \emph{Edge cases} dataset: YOLO11n/s/m performance comparison between LARD and GARD variants, with per-variant differences ($\Delta$).}
+  \label{tab:edge_cases_results}
+
 \begin{tabular}{|c|c|ccc|ccc|}
 \hline
 \multirow{2}{*}{\textbf{Model}} &
@@ -148,10 +206,9 @@ thresholds.
 \hline
 
 \end{tabular}
-  \caption{Validation with real images from LARD dataset, \emph{Edge cases} dataset: YOLO11n/s/m performance comparison between LARD and GARD variants, with per-variant differences ($\Delta$).}
-  \label{tab:edge_cases_results}
 \end{table}
 
+\FloatBarrier
 \section{Discussion}
 
 One concern with validating trained models with the Nominal dataset is that
@@ -172,7 +229,7 @@ The better performance of the LARD-based models in the Nominal dataset might be
 explained by the fact that the LARD dataset contains low diversity of weather
 and lighting conditions, and runway occlusion, which matches the characteristics
 of the Nominal dataset. This highlights the \emph{joint hypothesis problem} that
-was discussed in the literature review.
+was presented in the literature review section.
 
 This is also corroborated by the better performance of the GARD-based models in
 the Edge Cases dataset, where the better diversity and realism of the GARD
@@ -187,4 +244,24 @@ These results are promising, showing that the Canny2Concrete pipeline is
 effective in generating realistic runway images that can be used to train
 detection and segmentation models, and that the GARD datasets is a viable
 alternative to existing synthetic datasets.
+
+The biggest limitation in the Cany2Concrete pipeline is the need for template
+images. This limits the variety of structures that can be generated, and require
+a manual selection of images. Future work could be done in either
+programatically generating canny edge images without extracting them from any
+given image. It would also help if the diffusion model understood better the
+concept of a aerial view of a runway, so that it wouldn't need detailed canny
+edges to generate a realistic image.
+
+Another limitation is that, due to the chosen Stable Diffusion model, the
+images don't look as real photos, but more like digital art. Future work could
+shrink "Sim2Real" gap. This could be done by using a different diffusion model,
+or by adding another module to the pipeline that would convert images to this
+more realistic style.
+
+The pipeline could also generate better results by improving the outpainting
+techniques used in the variant image generation module. The current techniques
+generate noticeable borders between the original image and the outpainted
+background.
+
 

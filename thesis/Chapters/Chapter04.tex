@@ -30,7 +30,8 @@ It has two real images folders: \emph{Nominal cases} and \emph{Edge cases}, the 
 Because the template images are used to extract canny edges, it is better to use images with clear runway and surrounding area visibility. 
 Hence, the \emph{Nominal cases} folder, containing 1500 images, was chosen.
 
-The images are then processed into square format, since Stable Diffusion naturally works with square images. 
+The images are then processed into square format, since Stable Diffusion by
+default works with square images. 
 The runway is horizontally centered so it will not be out of frame when cropping into a square. 
 The following code does this:
 
@@ -112,16 +113,17 @@ corners_array[:, 1] *= (1024.0 / orig_h)
 \subsection{Base Image generation module}
 
 This is the most important module of the pipeline, as everything depends on the quality of the base images generated in this step. 
-To generate the images, the \texttt{diffusers} library \cite{???} is used, providing utilities for generating images with diffusion models.
+To generate the images, the \texttt{diffusers} library \cite{noauthor_diffusers_nodate} is used, providing utilities for generating images with diffusion models.
 
 The classes one needs from \texttt{diffusers} depend on which model is in use. 
-The DreamShaper model \cite{???} is a general-purpose Stable Diffusion model, meant to compete with other general-purpose models such as DALL-E and Midjourney. 
+The DreamShaper model \cite{noauthor_dreamshaper_2025} is a general-purpose Stable Diffusion model, meant to compete with other general-purpose models such as DALL-E and Midjourney. 
 Of several tested models and pipelines, DreamShaper was chosen for its image quality, faithfulness to the prompt, and ability to construct diverse scenarios (ranging across different lighting and weather conditions).
 
 From the DreamShaper family, we chose the DreamShaper XL version, capable of producing $1024 \times 1024$ images, as it is based on Stable Diffusion XL. 
 This higher resolution was necessary to generate finer details such as runway markings.
 
-Having selected DreamShaper XL, the rest follows naturally. 
+Having selected DreamShaper XL, it is required to choose a compatible ControlNet
+model and scheduler configuration. 
 For the ControlNet model, the pre-trained canny-edge-based ControlNet offered by \texttt{diffusers} for Stable Diffusion XL was used, and the recommended scheduler configuration for DreamShaper was applied:
 
 \begin{lstlisting}
@@ -152,7 +154,11 @@ The model tries to produce what is mentioned in the prompt and avoid what is men
 Crafting the prompt is a process of trial and error until satisfactory results are found. 
 In practice, it is helpful to look at prompts used in the model's example pages to see keywords the model responds strongly to, such as \texttt{cinematic film still}, \texttt{realistic}, \texttt{ugly}, or \texttt{deformed}.
 
-Since this project needed to create images under diverse scenarios, two base prompts were defined for daylight images with no weather adversity, and a dictionary of modifiers was used to add or remove keywords to achieve weather or time-of-day effects:
+Since this project needed to create images under diverse scenarios, after trying
+many different prompts, the following prompts were chosen for their ability to
+generate realistic runway images with different weather and lighting conditions.
+
+Two base prompts were defined for daylight images with no weather adversity, and a dictionary of modifiers was used to add or remove keywords to achieve weather or time-of-day effects:
 
 \begin{lstlisting}
 base_prompt = "photo of airport runway, aerial view, 4k, cinematic film still, realistic, beautiful landscape around, high-contrast runway lines"
@@ -215,7 +221,7 @@ generate_base_images(
 
 To generate variant images, three pipelines are run: a positional variant augmentation, outpainting the borders, and weather occlusion effects.
 
-The first pipeline uses the \emph{Albumentations} library \cite{???} to run three transformations: 
+The first pipeline uses the \emph{Albumentations} library \cite{buslaev_albumentations_2020} to run three transformations: 
 (1) random horizontal flip, 
 (2) padding with a border (to simulate a more distant runway), and 
 (3) slight random rotation from $-25^\circ$ to $+25^\circ$:
@@ -245,13 +251,13 @@ pipeline = A.ReplayCompose(
 \label{fig:noise_to_image}
 \end{figure}
 
-This pipeline generates images with black borders. 
+This first pipeline generates images with black borders. 
 The second pipeline uses \emph{inpainting} to fill in these black borders. 
 First, OpenCV-based inpainting is used, filling the black border with colors from the nearby region. 
 Then, a Stable Diffusion model refines the borders for better blending.
 
-OpenCV implements Alexandru Telea's inpainting algorithm [TODO: ADD CITATION TO
-TELEA] via \texttt{cv2.inpaint} with the \texttt{cv2.INPAINT\_TELEA} flag:
+OpenCV implements Alexandru Telea's inpainting algorithm \cite{telea_image_2004}
+via \texttt{cv2.inpaint} with the \texttt{cv2.INPAINT\_TELEA} flag:
 
 \begin{lstlisting}
 mask = np.all(image == 0, axis=2).astype(np.uint8) * 255
@@ -290,7 +296,7 @@ result = pipe(
 ).images[0]
 \end{lstlisting}
 
-The third pipeline reads the images output by the second pipeline and creates a new folder with the same images, further augmented with weather occlusion effects done by \texttt{imgaug} \cite{???}. 
+The third pipeline reads the images output by the second pipeline and creates a new folder with the same images, further augmented with weather occlusion effects done by \texttt{imgaug} \cite{jung_imgaug_2020}. 
 Effects are chosen depending on the variant:
 
 \begin{itemize}
@@ -332,21 +338,27 @@ A manual filtering tool was implemented in Python with OpenCV to assist in selec
 It reads images from a directory and allows pressing \texttt{Space} to select an image or \texttt{X} to discard. 
 Selected images are copied into a new directory, and a log file retains progress so the tool can be closed and resumed later without starting from scratch.
 
-Due to time constraints, template images were filtered as follows:
+After a first test running the Canny2Concrete pipeline, it was clear that not
+all canny edges generated from the nominal dataset were suitable for generating
+realistic runway images. Thus, to filter which images would be used as template
+images, the filtering tool was used to select only the images that effectively
+generated a realistic runway image.
+
+Template images were filtered as follows:
 \begin{enumerate}
 \item Use all images from \texttt{LARD\_test\_real\_nominal} as template images, pass them through the canny-edge and base-image generation modules, generating one daylight base image per template.
 \item Use the filtering tool to select which base images had easily recognizable runways with consistent markings and structure.
-\item In the end, 361 images were selected, and only these canny edges were used to generate all images in the final dataset.
+\item Then, only use these images as Template images to generate the datasets.
 \end{enumerate}
 
-\section{The final datasets}
+\section{Datasets generation}
 
-Three datasets are published:
+Three datasets are generated with the Canny2Concrete pipeline:
 
 \begin{enumerate}
-\item \texttt{BaseImages}: containing 6498 images (18 variations for each of the 361 canny edge images).
-\item \texttt{VariantImages}: containing 19494 images (3 variations for each base image) \emph{before} weather occlusion.
-\item \texttt{VariantImagesWithOcclusion}: also 19494 images, same as \texttt{VariantImages} but with weather effects applied.
+\item \texttt{BaseImages}: 18 variations for each of the canny edge images.
+\item \texttt{VariantImages}: 3 variations for each base image \emph{before} weather occlusion.
+\item \texttt{VariantImagesWithOcclusion}: same as \texttt{VariantImages} but with weather effects applied.
 \end{enumerate}
 
 Each image is associated with four files:
@@ -360,39 +372,6 @@ Each image is associated with four files:
 The JSON label file carries the runway keypoints as well as all data required for reproducing that specific image, including prompts, seeds, variant details, transformations, and so on. 
 This metadata supports image classification (by variant or weather type), label fixes without regenerating images, and easier reproducibility/peer review.
 
-Each directory also includes \texttt{train.txt}, \texttt{test.txt}, and \texttt{val.txt} splits in 80/10/10 proportions, ensuring images sharing the same source canny edge (and thus similar structure) do not leak from training into testing.
+Each dataset also includes \texttt{train.txt}, \texttt{test.txt}, and \texttt{val.txt} splits in 80/10/10 proportions, ensuring images sharing the same source canny edge (and thus similar structure) do not leak from training into testing.
 
-\section{Generated images}
-
-
-To demonstrate a sample of generated images, three random template images were
-chosen. Two are close-up shots and the third is a far away picture. They
-are shown as three grids of images of for rows.
-
-The first row contains the template image, the canny edge extracted from it,
-and the runway label mask. The second row contains three images from the Base
-Images dataset generated from the template image. The third row contains three
-images from the Variant Images dataset, generated from the Base Images. The
-fourth row contains three images from the Variant Images with Occlusion dataset,
-associated with the shown Variant Images.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=1.2\textwidth]{figures/GeneratedImage1.png}
-  \caption{Template image \emph{"9xG0a8TUdXg\_028"} }
-\label{fig:noise_to_image}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=1.2\textwidth]{figures/GeneratedImage2.png}
-  \caption{Template image \emph{"0CLSYZPFbTg\_110"} }
-\label{fig:noise_to_image}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=1.2\textwidth]{figures/GeneratedImage3.png}
-  \caption{Template image \emph{"0P-HJgLkZLk\_085"} }
-\label{fig:noise_to_image}
-\end{figure}
+These three datasets are collectively referred to as the \emph{GARD: Gustavo’s Awesome Runway Dataset} dataset.
