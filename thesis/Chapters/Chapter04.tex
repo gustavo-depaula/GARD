@@ -20,6 +20,7 @@
 \section{Pipeline}
 
 The pipeline is implemented through four Jupyter notebooks, one for each module.
+By convention, the file names are prefixed with \texttt{p\_} to indicate they are part of the pipeline.
 
 \subsection{Template image selection module}
 
@@ -241,7 +242,8 @@ The first pipeline uses the \emph{Albumentations} library \cite{buslaev_albument
 (2) padding with a border (to simulate a more distant runway), and 
 (3) slight random rotation from $-25^\circ$ to $+25^\circ$:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Variant image generation module,
+Albumentations pipeline}]
 pipeline = A.ReplayCompose(
     [
         A.HorizontalFlip(p=0.5),
@@ -263,7 +265,6 @@ pipeline = A.ReplayCompose(
 \centering
 \includegraphics[width=1.0\textwidth]{figures/albumentations.png}
   \caption{Applying the \emph{Albumentations} pipeline to an image.}
-\label{fig:noise_to_image}
 \end{figure}
 
 This first pipeline generates images with black borders. 
@@ -278,7 +279,8 @@ missing content.
 OpenCV implements Alexandru Telea's inpainting algorithm \cite{telea_image_2004}
 via \texttt{cv2.inpaint} with the \texttt{cv2.INPAINT\_TELEA} flag:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Variant image generation module,
+OpenCV-based inpainting}]
 mask = np.all(image == 0, axis=2).astype(np.uint8) * 255
 kernel = np.ones((3, 3), np.uint8)
 mask = cv2.dilate(mask, kernel, iterations=4)
@@ -291,7 +293,8 @@ image = Image.fromarray(cv2.cvtColor(
 After this initial inpainting, a Stable Diffusion XL Inpainting pipeline is used to process the image. 
 The original prompts used for the base images are reused, along with a blurred mask for smoother blending:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Variant image generation module,
+Stable Diffusion XL Inpainting pipeline}]
 pipe = StableDiffusionXLInpaintPipeline.from_pretrained(
     "lykon/dreamshaper-xl-lightning",
     torch_dtype=torch.float16,
@@ -319,7 +322,6 @@ result = pipe(
 \centering
 \includegraphics[width=1.0\textwidth]{figures/outpaint.png}
   \caption{Applying the outpainting pipeline to an image.}
-\label{fig:noise_to_image}
 \end{figure}
 
 The third pipeline reads the images output by the second pipeline and creates a new folder with the same images, further augmented with weather occlusion effects done by \texttt{imgaug} \cite{jung_imgaug_2020}. 
@@ -334,7 +336,8 @@ Effects are chosen depending on the variant:
 
 For example:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Variant image generation module,
+\texttt{imgaug} pipeline}]
 if variant in ["day", "night", "dusk", "dawn"]:
     aug = iaa.SomeOf((1, 2), [
         iaa.CloudLayer(...),
@@ -360,7 +363,6 @@ elif variant in ["snow", "snow+night"]:
 \centering
 \includegraphics[width=1.0\textwidth]{figures/occlusion.png}
   \caption{Applying the occlusion pipeline to an image.}
-\label{fig:noise_to_image}
 \end{figure}
 
 
@@ -409,3 +411,287 @@ This metadata supports image classification (by variant or weather type), label 
 Each dataset also includes \texttt{train.txt}, \texttt{test.txt}, and \texttt{val.txt} splits in 80/10/10 proportions, ensuring images sharing the same source canny edge (and thus similar structure) do not leak from training into testing.
 
 These three datasets are the parts of \emph{GARD: Gustavo’s Awesome Runway Dataset}.
+
+\section{Evaluation}
+
+The evaluation is done in two parts: intrinsic and extrinsic, through five
+jupyter notebooks. By convention, the file names are prefixed with \texttt{r\_} to
+indicate they are part of the results' evaluation.
+
+\subsection{Intrinsic evaluation}
+
+For the intrinsic evaluation, \ac{SSIM} is used to compare the generated images
+with their original templates. To compute the SSIM, the \texttt{pytorch-msssim}
+\cite{pessoa_jorge-pessoapytorch-msssim_2025}
+was used instead of the most commonly used \texttt{scikit-image}
+\cite{van_der_walt_scikit-image_2014}
+implementation,
+as the former runs on the GPU and is faster.
+
+This function groups SSIM scores by variant type (e.g., \texttt{day},
+\texttt{fog+night}) for later statistical analysis and comparison:
+
+\begin{lstlisting}[language=Python, caption={Evaluation, SSIM score calculation}]
+def calculate_ssim_values(folder):
+    image_files = [f for f in os.listdir(folder) if f.lower().endswith(".png") and not f.lower().endswith(".mask.png")]
+
+    results = {}
+    
+    for img_name in tqdm(image_files, desc="Processing images", unit="img"):
+        ...
+
+        if not results.get(variant):
+            results[variant] = []
+
+        template = cv2.imread(f'p_Templates/{sourceImage}')
+        template.resize((1024,1024,3))
+
+        image_tensor = torch.from_numpy(image)
+                            .float().permute(2, 0, 1)
+                            .unsqueeze(0).to(device) / 255.0
+        template_tensor = torch.from_numpy(template)
+                               .float().permute(2, 0, 1)
+                               .unsqueeze(0).to(device) / 255.0
+
+        with torch.no_grad():
+            score = ssim(
+                template_tensor,
+                image_tensor,
+                data_range=1.0,
+                size_average=True
+            ).item()
+
+        results[variant].append(score)
+
+    return results
+\end{lstlisting}
+
+\subsection{Experimental evaluation}
+
+Experimental evaluation was done by training and fine-tuning YOLOv11 models on
+the generated datasets, and on the LARD dataset, serving as a baseline. The YOLO
+architecture was chosen because it is commonly used for object detection and
+segmentation tasks, were widely used in the literature review, and have a strong community
+support. YOLOv11 was chosen because it is the latest and best-performing YOLO model.
+
+\subsubsection{Generating Labels and Masks for GARD}
+
+Before training the YOLO model, it is necessary to create labels in the YOLO
+format. To make it also easier to train other segmenation models, a binary mask
+is also generated for each image. Both the YOLO TXT labels and the masks are
+published alongside the images.
+
+\begin{lstlisting}[language=Python, caption={Evaluation, generating labels and masks}]
+def polygon_to_yolo_label_from_image_dict(image: Image.Image, data: dict, class_id=0) -> str:
+    """
+    Converts the 'runwayLabel' polygon from the data dict into YOLO segmentation format:
+    <class-index> <x1> <y1> <x2> <y2> ... <xn> <yn>
+    
+    Coordinates are normalized to [0, 1] based on the image dimensions.
+    """
+    if "runwayLabel" not in data:
+        raise KeyError("'runwayLabel' key not found in data dict.")
+    
+    polygon = ensure_clockwise_quad(data["runwayLabel"])
+    width, height = image.size
+
+    # Normalize coordinates to 0-1 range
+    normalized_points = [(pt[0] / width, pt[1] / height) for pt in polygon]
+    
+    flat_coords = " ".join(f"{x:.6f} {y:.6f}" for x, y in normalized_points)
+    return f"{class_id} {flat_coords}"
+
+
+def create_runway_segmentation_mask(image: Image.Image, data: dict) -> Image.Image:
+    if "runwayLabel" not in data:
+        raise KeyError("'runwayLabel' key not found in data dict.")
+    
+    polygon = ensure_clockwise_quad(data["runwayLabel"])
+    width, height = image.size
+    mask = Image.new("L", (width, height), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.polygon([(int(x), int(y)) for (x, y) in polygon], fill=255)
+
+    return mask
+\end{lstlisting}
+
+
+\subsubsection{Assembling YOLO datasets}
+
+YOLO requires a very specific dataset folder structure to fine-tune and validate
+the model. To convert the GARD and LARD datasets into these formats, symlinks
+were used to avoid duplicating the images and labels.
+
+First, splits are created for the GARD datasets:
+
+\begin{lstlisting}[language=Python, caption={Evaluation, GARD train/test/val splits}]
+def create_yolo_dataset(folder_path: str):
+    """
+    Creates train.txt, test.txt, val.txt, and dataset.yaml inside `folder_path`
+    based on PNG images in `folder_path` (excluding *.mask.png files).
+    
+    Splits data by original_id (to avoid data leakage) into
+    80% train, 10% test, 10% val.
+    
+    NOTE: The paths inside train.txt/test.txt/val.txt will be relative
+    to `folder_path`.
+    """
+
+    n = len(original_ids)
+    train_end = int(0.80 * n)
+    test_end  = int(0.90 * n)
+
+    train_ids = original_ids[:train_end]
+    test_ids  = original_ids[train_end:test_end]
+    val_ids   = original_ids[test_end:]
+
+    ...
+\end{lstlisting}
+
+As the comments indicate, the splits are done by the \texttt{sourceImage}
+field, which references the original template image. This ensures that images
+generated from the same template are not split across train/test/val, avoiding
+data leakage.
+
+Then, the following code assembles the dataset:
+
+\begin{lstlisting}[language=Python, caption={Evaluation, assembling GARD dataset
+in YOLO structure}]
+def process_folder_structure_with_labels(folder_path: str):
+    """
+    Reads train.txt, test.txt, val.txt from `folder_path` (which was created by create_yolo_dataset).
+    Builds a YOLO directory structure in `datasets/<folder_name>`, placing:
+    
+      datasets/<folder_name>/
+        images/train/ -> symlinks to the train images
+        images/test/  -> symlinks to the test images
+        images/val/   -> symlinks to the val images
+        labels/train/ -> symlinks to the corresponding train labels
+        labels/test/  -> symlinks to the corresponding test labels
+        labels/val/   -> symlinks to the corresponding val labels
+        dataset.yaml  -> references these subfolders
+
+    :param folder_path: The path to your original folder (e.g. "p_BaseImages"),
+                        which must have train.txt, test.txt, val.txt, dataset.yaml
+                        already generated by create_yolo_dataset().
+    """
+
+    src_dir = Path(folder_path).resolve()
+    folder_name = src_dir.name  # e.g. "p_BaseImages"
+
+    # The new dataset directory, e.g. datasets/p_BaseImages
+    dst_base = Path("datasets") / folder_name
+    dst_base.mkdir(parents=True, exist_ok=True)
+
+    # keep the standard YOLO layout:
+    # images/train, images/test, images/val, plus labels/train, labels/test, labels/val
+    images_dir = dst_base / "images"
+    labels_dir = dst_base / "labels"
+    train_img_dir = images_dir / "train"
+    test_img_dir  = images_dir / "test"
+    val_img_dir   = images_dir / "val"
+    train_lbl_dir = labels_dir / "train"
+    test_lbl_dir  = labels_dir / "test"
+    val_lbl_dir   = labels_dir / "val"
+
+    train_img_dir.mkdir(parents=True, exist_ok=True)
+    test_img_dir.mkdir(parents=True, exist_ok=True)
+    val_img_dir.mkdir(parents=True, exist_ok=True)
+    train_lbl_dir.mkdir(parents=True, exist_ok=True)
+    test_lbl_dir.mkdir(parents=True, exist_ok=True)
+    val_lbl_dir.mkdir(parents=True, exist_ok=True)
+
+    train_file = src_dir / "train.txt"
+    test_file  = src_dir / "test.txt"
+    val_file   = src_dir / "val.txt"
+
+    ...
+    # Symlink the train, test, val sets
+    symlink_split(train_file, train_img_dir, train_lbl_dir)
+    symlink_split(test_file,  test_img_dir,  test_lbl_dir)
+    symlink_split(val_file,   val_img_dir,   val_lbl_dir)
+
+    ...
+    dst_dataset_yaml = dst_base / "dataset.yaml"
+    with dst_dataset_yaml.open("w") as f:
+        f.write(dataset_yaml_content)
+\end{lstlisting}
+
+Similar functions were used to assemble the LARD dataset in YOLO format, and
+also the LARD test real datasets, which were used for validation.
+
+\subsubsection{Fine-tuning YOLOv11}
+
+Once the dataset is assembled in YOLO's format, it is very easy to fine-tune a
+pre-trained model:
+
+\begin{lstlisting}[language=Python, caption={Evaluation, fine-tuning YOLOv11}]
+from ultralytics import YOLO
+
+model = YOLO("yolo11n-seg.pt")
+results = model.train(
+    data="./datasets/p_BaseImages/dataset.yaml",
+    epochs=100,
+    patience=10,
+    project="trained_models/yolo",
+    name="gard-BaseImages",
+)
+\end{lstlisting}
+
+Epochs and patience are hyperparameters that can be adjusted, with epochs
+indicating the maximum number of training epochs and patience indicating the
+number of epochs to wait before early stopping if the validation loss does not
+improve. YOLO saves the best and latest weights. These weights are also
+published on the project's Kaggle repository.
+
+\subsubsection{Validation}
+
+Using the LARD test real datasets, the trained models are validated, using
+YOLO's own validation function:
+
+\begin{lstlisting}[language=Python, caption={Evaluation, YOLOv11 validation}]
+import os
+from ultralytics import YOLO
+
+def evaluate_all_models():
+    models_base_path = "trained_models/yolo"
+    properties = {
+        "save_json": True,
+        "plots": True,
+        "imgsz": 640,
+        "batch": 16,
+        "conf": 0.50,
+        "iou": 0.6,
+        "device": "0",
+        "save_txt": True,
+        "save_conf": True,
+        "save_crop": True
+    }
+    
+    results_dict = {}
+    
+    for model_dir in os.listdir(models_base_path):
+        ...
+        
+        model = YOLO(best_weights_path)
+
+        nominal_results = model.val(
+            data="./datasets/LARD-real-nominal/dataset.yaml",
+            **properties,
+        )
+        edge_cases_results = model.val(
+            data="./datasets/LARD-real-edge-cases/dataset.yaml",
+            **properties,
+        )
+        
+        results_dict[model_dir] = {
+            "nominal": nominal_results,
+            "edge_cases": edge_cases_results
+        }
+
+    return results_dict
+\end{lstlisting}
+
+The results are both saved to folders that are published on the project's Kaggle
+repository and returned as a dictionary for easier analysis on the Jupyter
+notebook itself.

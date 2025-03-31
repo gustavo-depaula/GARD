@@ -13,8 +13,38 @@ into three datasets:
 \begin{enumerate}
 \item \texttt{BaseImages}: containing 6498 images (18 variations for each of the 361 canny edge images).
 \item \texttt{VariantImages}: containing 19494 images (3 variations for each base image) \emph{before} weather occlusion.
-\item \texttt{VariantImagesWithOcclusion}: also 19494 images, same as \texttt{VariantImages} but with weather effects applied.
+\item \texttt{VariantImagesWithOcclusion}: also 19494 images, same as
+  \texttt{VariantImages} but with heavy weather occlusion effects applied.
 \end{enumerate}
+
+Table~\ref{tab:dataset_distribution} shows the distribution of data diversity,
+presenting the number of images per weather and lighting condition in each dataset.
+
+\begin{table}[h]
+\centering
+\caption{Distribution of images per condition in each dataset.}
+\label{tab:dataset_distribution}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Condition} & \textbf{Base Images} & \textbf{Variant Images} &
+  \textbf{Variants w/ Occlusion} \\
+\hline
+Daylight, no occlusion     & 1,805 & 5,415 & 5,415 \\
+Nighttime, no occlusion    & 1,805 & 5,415 & 5,415 \\
+Dusk, no occlusion         & 361   & 1,083 & 1,083 \\
+Dawn, no occlusion         & 361   & 1,083 & 1,083 \\
+Daylight, Fog              & 361   & 1,083 & 1,083 \\
+Nightime, Fog              & 361   & 1,083 & 1,083 \\
+Daylight, Rain             & 361   & 1,083 & 1,083 \\
+Nightime, Rain             & 361   & 1,083 & 1,083 \\
+Daylight, Snow             & 361   & 1,083 & 1,083 \\
+Nighttime, Snow            & 361   & 1,083 & 1,083 \\
+\hline
+\textbf{Total}             & 6,498 & 19,494 & 19,494 \\
+\hline
+\end{tabular}
+\end{table}
+
 
 \section{Sample Images}
 
@@ -33,21 +63,18 @@ associated with the shown Variant Images.
 \centering
 \includegraphics[width=1.2\textwidth]{figures/GeneratedImage1.png}
   \caption{Images generated from the template image \emph{"9xG0a8TUdXg\_028"}.}
-\label{fig:noise_to_image}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=1.2\textwidth]{figures/GeneratedImage2.png}
   \caption{Images generated from the template image \emph{"0CLSYZPFbTg\_110"}.}
-\label{fig:noise_to_image}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=1.2\textwidth]{figures/GeneratedImage3.png}
   \caption{Images generated from the template image \emph{"0P-HJgLkZLk\_085"}.}
-\label{fig:noise_to_image}
 \end{figure}
 
 \FloatBarrier
@@ -66,7 +93,6 @@ On the other hand, since the generated image is based on the canny edge structur
 \hspace*{-2.5cm} % shift left by 1.5 centimeters
 \includegraphics[width=1.5\textwidth]{figures/SSIM.png}
   \caption{SSIM Comparison Across Variants and Datasets}
-\label{fig:noise_to_image}
 \end{figure}
 
 These are positive results, clearly indicating that the data augmentation process is functioning as expected. 
