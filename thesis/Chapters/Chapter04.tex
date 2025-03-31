@@ -35,7 +35,8 @@ default works with square images.
 The runway is horizontally centered so it will not be out of frame when cropping into a square. 
 The following code does this:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Template image selection module,
+image pre-processing}]
 xs = [p[0] for p in pts]
 ys = [p[1] for p in pts]
 min_x, max_x = min(xs), max(xs)
@@ -56,7 +57,8 @@ cropped_img = img.crop((left, top, right, bottom))
 
 Then, the new shifted runway corners' keypoints are computed to build a JSON label:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Template image selection module,
+label building}]
 shifted_pts = [(p[0] - left, p[1] - top) for p in pts]
 
 # Build label
@@ -74,7 +76,9 @@ Finally, the image label is converted to JSON, and both the cropped images and t
 The edge extraction module contains a generator function that takes an input directory and outputs a directory with corresponding canny edge images at a $1024 \times 1024$ resolution. 
 The generator function uses an image processor from a ControlNet Auxiliary library to generate the canny edges, and then resizes to the desired resolution:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Edge extraction module,
+edge extraction}]
+
 from controlnet_aux.processor import Processor
 
 processor = Processor(
@@ -91,7 +95,8 @@ canny_pil = processor(pil_in, to_pil=True).resize((1024, 1024))
 
 To help in the image generation process, a polygon is drawn onto the image to delimit the area of the runway:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Edge extraction module,
+polygon drawing in canny edge image}]
 cv2.polylines(
     canny_array,
     [corners_sorted.astype(np.int32)],
@@ -103,7 +108,8 @@ cv2.polylines(
 
 Finally, the corners are scaled to this new image resolution and saved to the new label file:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Edge extraction module,
+scaling corners to new resolution}]
 orig_h, orig_w = image_bgr.shape[:2]
 corners_array = np.array(runway_corners, dtype=np.float32)
 corners_array[:, 0] *= (1024.0 / orig_w)
@@ -126,7 +132,8 @@ Having selected DreamShaper XL, it is required to choose a compatible ControlNet
 model and scheduler configuration. 
 For the ControlNet model, the pre-trained canny-edge-based ControlNet offered by \texttt{diffusers} for Stable Diffusion XL was used, and the recommended scheduler configuration for DreamShaper was applied:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Base Image generation module,
+model and scheduler configuration}]
 controlnet = ControlNetModel.from_pretrained(
     "diffusers/controlnet-canny-sdxl-1.0", torch_dtype=torch.float16
 )
@@ -160,7 +167,8 @@ generate realistic runway images with different weather and lighting conditions.
 
 Two base prompts were defined for daylight images with no weather adversity, and a dictionary of modifiers was used to add or remove keywords to achieve weather or time-of-day effects:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Base Image generation module,
+prompt definitions}]
 base_prompt = "photo of airport runway, aerial view, 4k, cinematic film still, realistic, beautiful landscape around, high-contrast runway lines"
 
 base_neg = "airplane, ugly, low-quality, ugly background, ugly airstrip, deformed, dark, noisy, blurry, low contrast, missing lines, unrealistic, drawing, objects on runway"
@@ -196,7 +204,8 @@ modifiers = {
 A helper function (e.g., \texttt{apply\_modifiers}) builds the final prompts (and negative prompts) from the base prompts and these modifiers. 
 It also receives the number of images to generate, returning a data structure that can be passed to \texttt{generate\_base\_images}, which uses the prompt pairs to generate and save images:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Python, caption={Base Image generation module,
+generating base images}]
 generate_base_images(
     "p_FilteredCannyEdges",  # input directory
     "p_BaseImages",          # output directory
