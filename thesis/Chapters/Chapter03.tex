@@ -7,14 +7,23 @@ The literature review has shown the importance of large-scale, public, and diver
 
 At the same time, the emergence of diffusion models as the new state-of-the-art technique in image generation has opened a new window of opportunity in building synthetic datasets. Although this idea of using diffusion models to build synthetic datasets has been explored in other fields, there is no known work applying it to the runway segmentation research field.
 
-This project's primary research question is how can a suitable synthetic image dataset be built for computational vision tasks without the need of images extracted from simulators or similar solutions. To answer this question, the project uses the field of vision-based landing and builds a synthetic runway image dataset.
+This project's primary research question is \emph{how can a suitable synthetic
+image dataset be built for computational vision tasks without the need of images
+extracted from simulators or similar solutions}. To answer this question, the project uses the field of vision-based landing and builds a synthetic runway image dataset.
 
-The primary users of this project are researchers that may use the dataset and techniques provided in this project to build models for runway detection. Secondary users might be researchers interested in synthesizing their own datasets for computational vision tasks such as classification or segmentation.
+The primary users of this project are researchers that may use the dataset,
+\emph{GARD}, provided with this project to
+build models for runway detection and segmentation. Secondary users might be
+researchers interested in synthesizing their own datasets for
+computational vision tasks, such as classification or segmentation, using the
+\emph{Canny2Concrete} pipeline architecture, adapting it for their own needs.
 
 With these end-users in mind, this projects delivers a two-fold contribution: a novel modular data augmentation pipeline that can increase the diversity of an existing dataset, while maintaining key features and structures; and using this data augmentation pipeline to generate a fully synthetic runway images dataset based on existing public datasets.
 
 The proposed research question begs the question of what constitutes a "suitable synthetic image dataset". Here, we rank the following characteristics that make an image dataset suitable:
 
+\phantomsection
+\label{sec:suitable-dataset}
 \begin{enumerate}
     \item \textbf{Human-judged realism}: humans subjectively judge the images as credible and realistic. When comparing side-by-side the images of the generated dataset with other datasets, the perceived quality of the images are the same or better.
     \item \textbf{Detection by existing models}: fine-tuned models on available datasets can detect the presence and segmentation of the desired data (runways in this project) in the images.
@@ -33,9 +42,11 @@ The data augmentation pipeline is composed of four separate modules, that can ea
 
     \item[\textbf{Edge extraction module}]: this step uses the template images as input, processes them, and outputs canny edge images, to be used as inputs for ControlNet, alongside the according label for that image.
 
-    \item[\textbf{Base Image generation module}]: this step uses as inputs the canny edges, a list of text prompts, and a number of how many images should be generated for each pair of canny edge and prompt. It then uses a text-to-image model with ControlNet to generate base images. These images should be, similarly to the template ones, images with clear visibility of the runway and its surroundings. Thus, although we expect high-quality images as output, it will not be a diverse set of images. This module also outputs the labels for each image, adding metadata of what model, seed, and prompt was used.
+    \item[\textbf{Base Image generation module}]: this step uses as inputs the canny edges, a list of text prompts, and a number of how many images should be generated for each pair of canny edge and prompt. It then uses a text-to-image model with ControlNet to generate base images.
 
-    \item[\textbf{Variant image generation module}]: this module uses as input the filtered base images and a list of "diversity prompts". These diversity prompts are text prompts designed to be an input to an image-to-image model, so that the base dataset generated can be expanded to have more diversity in terms of background scenery, weather, and lighting conditions.
+    \item[\textbf{Variant image generation module}]: this module uses as input
+      the base images and apply a series of transformations to them, such as
+      applying rotations and occlusion effects to the image.
 \end{description}
 
 \section{Evaluation}
@@ -44,12 +55,22 @@ Following the standards of evaluation of synthetic datasets presented in the lit
 
 Intrinsic evaluation measures the quality of a dataset by its intrinsic characteristics, such as image realism, resolution, diversity, and size. Ideally, to judge human-based realism, a group of subject experts would be assembled to judge the images, but because of time-constraints, this won't be done.
 
-Instead, it will be replaced by metrics of image similarity between template images and the generated base images. Through metrics such as FID (Fréchet Inception Distance) and SSIM (Structural Similarity Index) it is possible to know how similar or different the images are from one another, and if they retain a similar structure such as the runway shape, position, and markings, and a similar background.
+Instead, it will be replaced by metrics of image similarity between template
+images and the generated base images. Through metrics such as FID (Fréchet
+Inception Distance) and SSIM (Structural Similarity Index) it is possible to
+know how similar or different the images are from one another, and if they
+retain similar structures, such as the runway shape, position, and markings, and background.
 
 Other metrics such as size and image resolution will be reported. Data diversity will also be reported based on the generated images' text prompts. This doesn't guarantee full accuracy as there is a possibility of the model "hallucinating" and not generating a certain desired characteristic (e.g. rain, snow, runway occlusion), but nonetheless allows a good estimate to be reported.
 
 Experimental evaluation is about using the dataset to train one or a collection of models and evaluating their performance empirically. It is an imperfect measurement, as there is a lot of moving parts when training a model, and, as seen on the literature review, a poor performance might be due to the dataset quality or an inherent flaw in the model's architecture. However, this type of evaluation is still widely used and a standard in testing synthetic datasets.
 
-As it is not the focus of this project building a new architecture for runway segmentation, the experimental evaluation will be restricted to training and fine-tuning existing detection and segmentation models, such as YOLO.
+As it is not the focus of this project building a new architecture for runway
+segmentation, the experimental evaluation will be restricted to training and
+fine-tuning existing detection and segmentation models, such as YOLO
+\cite{jocher_ultralytics_2023}.
 
-Using a pre-trained segmentation model, comparisons will be made between the performance of training on this new synthetic dataset and of existing datasets, and the resulting performance when detecting a real images dataset. Also helping in assessing the realism of the images in the synthetic dataset, the accuracy of a model trained on an existing dataset trying to detect runways on the synthetic dataset will be reported.
+Using a pre-trained segmentation model, comparisons will be made between the
+performance of training on this new synthetic dataset and of existing datasets,
+and the resulting performance when detecting a real images dataset. The main
+metric used will be \ac{mAP}, at different levels of recall thresholds.

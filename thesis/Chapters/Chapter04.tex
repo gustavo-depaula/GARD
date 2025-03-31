@@ -119,7 +119,9 @@ corners_array[:, 1] *= (1024.0 / orig_h)
 \subsection{Base Image generation module}
 
 This is the most important module of the pipeline, as everything depends on the quality of the base images generated in this step. 
-To generate the images, the \texttt{diffusers} library \cite{noauthor_diffusers_nodate} is used, providing utilities for generating images with diffusion models.
+To generate the images, the \texttt{diffusers} library
+\cite{noauthor_diffusers_nodate} is used, providing utilities for generating
+images with pre-trained diffusion models.
 
 The classes one needs from \texttt{diffusers} depend on which model is in use. 
 The DreamShaper model \cite{noauthor_dreamshaper_2025} is a general-purpose Stable Diffusion model, meant to compete with other general-purpose models such as DALL-E and Midjourney. 
@@ -130,7 +132,10 @@ This higher resolution was necessary to generate finer details such as runway ma
 
 Having selected DreamShaper XL, it is required to choose a compatible ControlNet
 model and scheduler configuration. 
-For the ControlNet model, the pre-trained canny-edge-based ControlNet offered by \texttt{diffusers} for Stable Diffusion XL was used, and the recommended scheduler configuration for DreamShaper was applied:
+For the ControlNet model, the pre-trained canny-edge-based ControlNet offered by
+\texttt{diffusers} for Stable Diffusion XL was used, and the recommended
+scheduler configuration for DreamShaper was applied. Enabling CPU offloading was
+critical to avoid running out of GPU memory:
 
 \begin{lstlisting}[language=Python, caption={Base Image generation module,
 model and scheduler configuration}]
@@ -201,7 +206,8 @@ modifiers = {
 }
 \end{lstlisting}
 
-A helper function (e.g., \texttt{apply\_modifiers}) builds the final prompts (and negative prompts) from the base prompts and these modifiers. 
+A helper function (e.g., \texttt{apply\_modifiers}) builds the final prompts
+(and negative prompts) from the base prompts and the modifiers. 
 It also receives the number of images to generate, returning a data structure that can be passed to \texttt{generate\_base\_images}, which uses the prompt pairs to generate and save images:
 
 \begin{lstlisting}[language=Python, caption={Base Image generation module,
@@ -265,6 +271,10 @@ The second pipeline uses \emph{inpainting} to fill in these black borders.
 First, OpenCV-based inpainting is used, filling the black border with colors from the nearby region. 
 Then, a Stable Diffusion model refines the borders for better blending.
 
+OpenCV-based inpainting is used because Stable Diffusion inpainting worked
+better when the inpainting region was filled with a rough approximation of the
+missing content.
+
 OpenCV implements Alexandru Telea's inpainting algorithm \cite{telea_image_2004}
 via \texttt{cv2.inpaint} with the \texttt{cv2.INPAINT\_TELEA} flag:
 
@@ -305,6 +315,13 @@ result = pipe(
 ).images[0]
 \end{lstlisting}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.0\textwidth]{figures/outpaint.png}
+  \caption{Applying the outpainting pipeline to an image.}
+\label{fig:noise_to_image}
+\end{figure}
+
 The third pipeline reads the images output by the second pipeline and creates a new folder with the same images, further augmented with weather occlusion effects done by \texttt{imgaug} \cite{jung_imgaug_2020}. 
 Effects are chosen depending on the variant:
 
@@ -338,6 +355,14 @@ elif variant in ["snow", "snow+night"]:
     image = aug(image=image)
     applied_effects.append("snowflakes")
 \end{lstlisting}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.0\textwidth]{figures/occlusion.png}
+  \caption{Applying the occlusion pipeline to an image.}
+\label{fig:noise_to_image}
+\end{figure}
+
 
 After each augmentation pipeline, the label JSON file is enriched with data to ensure reproducibility, including random seeds and applied transformations.
 
@@ -383,4 +408,4 @@ This metadata supports image classification (by variant or weather type), label 
 
 Each dataset also includes \texttt{train.txt}, \texttt{test.txt}, and \texttt{val.txt} splits in 80/10/10 proportions, ensuring images sharing the same source canny edge (and thus similar structure) do not leak from training into testing.
 
-These three datasets are collectively referred to as the \emph{GARD: Gustavo’s Awesome Runway Dataset} dataset.
+These three datasets are the parts of \emph{GARD: Gustavo’s Awesome Runway Dataset}.
