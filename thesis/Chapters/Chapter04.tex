@@ -272,8 +272,8 @@ The second pipeline uses \emph{inpainting} to fill in these black borders.
 First, OpenCV-based inpainting is used, filling the black border with colors from the nearby region. 
 Then, a Stable Diffusion model refines the borders for better blending.
 
-OpenCV-based inpainting is used because Stable Diffusion inpainting worked
-better when the inpainting region was filled with a rough approximation of the
+OpenCV-based inpainting is used because Stable Diffusion inpainting works
+better when the inpainting region is filled with a rough approximation of the
 missing content.
 
 OpenCV implements Alexandru Telea's inpainting algorithm \cite{telea_image_2004}
@@ -384,7 +384,7 @@ Template images were filtered as follows:
 \begin{enumerate}
 \item Use all images from \texttt{LARD\_test\_real\_nominal} as template images, pass them through the canny-edge and base-image generation modules, generating one daylight base image per template.
 \item Use the filtering tool to select which base images had easily recognizable runways with consistent markings and structure.
-\item Then, only use these images as Template images to generate the datasets.
+\item Then, only use these selected images as template images to generate the datasets.
 \end{enumerate}
 
 \section{Datasets generation}
@@ -410,12 +410,12 @@ This metadata supports image classification (by variant or weather type), label 
 
 Each dataset also includes \texttt{train.txt}, \texttt{test.txt}, and \texttt{val.txt} splits in 80/10/10 proportions, ensuring images sharing the same source canny edge (and thus similar structure) do not leak from training into testing.
 
-These three datasets are the parts of \emph{GARD: Gustavo’s Awesome Runway Dataset}.
+These three datasets are the parts of \emph{GARD: Gustavo's Awesome Runway Dataset}.
 
 \section{Evaluation}
 
 The evaluation is done in two parts: intrinsic and extrinsic, through five
-jupyter notebooks. By convention, the file names are prefixed with \texttt{r\_} to
+Jupyter notebooks. By convention, the file names are prefixed with \texttt{r\_} to
 indicate they are part of the results' evaluation.
 
 \subsection{Intrinsic evaluation}
@@ -423,7 +423,7 @@ indicate they are part of the results' evaluation.
 For the intrinsic evaluation, \ac{SSIM} is used to compare the generated images
 with their original templates. To compute the SSIM, the \texttt{pytorch-msssim}
 \cite{pessoa_jorge-pessoapytorch-msssim_2025}
-was used instead of the most commonly used \texttt{scikit-image}
+was used instead of the more commonly used \texttt{scikit-image}
 \cite{van_der_walt_scikit-image_2014}
 implementation,
 as the former runs on the GPU and is faster.
@@ -469,15 +469,15 @@ def calculate_ssim_values(folder):
 \subsection{Experimental evaluation}
 
 Experimental evaluation was done by training and fine-tuning YOLOv11 models on
-the generated datasets, and on the LARD dataset, serving as a baseline. The YOLO
+the generated datasets and on the LARD dataset, serving as a baseline. The YOLO
 architecture was chosen because it is commonly used for object detection and
-segmentation tasks, were widely used in the literature review, and have a strong community
+segmentation tasks, was widely used in the literature review, and has strong community
 support. YOLOv11 was chosen because it is the latest and best-performing YOLO model.
 
 \subsubsection{Generating Labels and Masks for GARD}
 
 Before training the YOLO model, it is necessary to create labels in the YOLO
-format. To make it also easier to train other segmenation models, a binary mask
+format. To make it also easier to train other segmentation models, a binary mask
 is also generated for each image. Both the YOLO TXT labels and the masks are
 published alongside the images.
 
@@ -646,7 +646,7 @@ published on the project's Kaggle repository.
 
 \subsubsection{Validation}
 
-Using the LARD test real datasets, the trained models are validated, using
+Using the LARD test real datasets, the trained models are validated using
 YOLO's own validation function:
 
 \begin{lstlisting}[language=Python, caption={Evaluation, YOLOv11 validation}]
@@ -693,5 +693,5 @@ def evaluate_all_models():
 \end{lstlisting}
 
 The results are both saved to folders that are published on the project's Kaggle
-repository and returned as a dictionary for easier analysis on the Jupyter
+repository and returned as a dictionary for easier analysis in the Jupyter
 notebook itself.
