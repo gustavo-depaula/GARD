@@ -45,7 +45,72 @@ Nighttime, Snow            & 361   & 1,083 & 1,083 \\
 \end{tabular}
 \end{table}
 
+Finally, a comparison between GARD and other synthetic datasets is shown in
+Figure~\ref{fig:dataset_image_counts}, such as BARS \cite{chen_bars_2023},
+RLD \cite{wang_valnet_2024}, FS2020 \cite{chen_image-based_2024}, and LARD
+\cite{ducoffe_lard_2023}.
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar stacked,
+  bar width=20pt,
+  width=\textwidth,
+  height=9cm,
+  ymin=0,
+  ylabel={Number of Images},
+  xtick=data,
+  symbolic x coords={BARS, RLD, FS2020, LARD, GARD},
+  enlarge x limits=0.2,
+  nodes near coords,
+  nodes near coords align={vertical},
+  every node near coord/.append style={
+      font=\small,
+      anchor=west,
+      rotate=90,
+      xshift=3pt
+  },
+  legend style={at={(0.5,-0.15)}, anchor=north, legend columns=3}
+]
+
+% First bar layer: BARS, RLD, FS2020, LARD, GARD base
+\addplot+[ybar, fill=gray!50] coordinates {
+    (BARS,10256)
+    (RLD,12239)
+    (FS2020,5587)
+    (LARD,17000)
+    (GARD,6498) % GARD base images
+};
+
+% Second bar layer: GARD variant images only
+\addplot+[ybar, fill=blue!40] coordinates {
+    (BARS,0)
+    (RLD,0)
+    (FS2020,0)
+    (LARD,0)
+    (GARD,19494)
+};
+
+% Third bar layer: GARD variant with occlusion
+\addplot+[ybar, fill=blue!20] coordinates {
+    (BARS,0)
+    (RLD,0)
+    (FS2020,0)
+    (LARD,0)
+    (GARD,19494)
+};
+
+\legend{Base Dataset, GARD Variant, GARD Occlusion}
+\end{axis}
+\end{tikzpicture}
+\caption{Number of images per dataset used in runway segmentation research.}
+\label{fig:dataset_image_counts}
+\end{figure}
+
+
+
+\FloatBarrier
 \section{Sample Images}
 
 To demonstrate a sample of generated images, three random template images were
